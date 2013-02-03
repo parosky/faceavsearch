@@ -7,13 +7,12 @@ import threading
 import os
 import urllib
 import urllib2
-import time
 import chardet
 import BeautifulSoup
+import time
 
 base_url = 'http://www.dmm.co.jp'
-max_threads = 100
-
+max_threads = 50
 
 class DownloadThread(threading.Thread):
     def __init__(self, cid):
@@ -28,9 +27,19 @@ class DownloadThread(threading.Thread):
         os.mkdir(directory_temp)
 
         # get image filename
-        lines = urllib2.urlopen(self.url).read()
-        lines = unicode(lines, chardet.detect(lines)['encoding'], 'ignore')
-        
+        while True:
+            try:
+                lines = urllib2.urlopen(self.url).read()
+                lines = unicode(lines, chardet.detect(lines)['encoding'], 'ignore')
+                break
+            except urllib2.URLError as e:
+                if e.code == 404:
+                    print "404:", self.url
+                    return
+                else:
+                    print "download error"
+                    time.sleep(10)
+
         # no sample
         if u"拡大表示されません" in lines:
             print "no image", self.url
@@ -38,19 +47,27 @@ class DownloadThread(threading.Thread):
             return
          
         soup = BeautifulSoup.BeautifulSoup(lines)
+        img_urls = []
+
+        # package
+        img_urls.append(soup(attrs={'name': 'package-image'})[0]['href'])
+        
+        # sample
         s4 = soup(attrs={'id': 'sample-image-block'})
         if len(s4) != 0:
-            img_urls = [s3['src'].replace('-', 'jp-') for s3 in s4[0]('img')]
-                
-            for img_url in img_urls:
-                filename = img_url[img_url.rindex("/")+1:]
-                print img_url
-                
-                opened_url = urllib2.urlopen(img_url)
-                if opened_url.url != img_url:
-                    print "connect error"
-                    return
-                urllib.urlretrieve( img_url, "%s/%s" % (directory_temp, filename))
+            img_urls += [s3['src'].replace('-', 'jp-') for s3 in s4[0]('img')]
+            
+        for img_url in img_urls:
+            filename = img_url[img_url.rindex("/")+1:]
+            print img_url
+            
+            while True:
+                try:
+                    urllib.urlretrieve( img_url, "%s/%s" % (directory_temp, filename))
+                    break
+                except:
+                    print "download error:", img_url
+                    time.sleep(10)
 
         os.rename(directory_temp, directory)
 
