@@ -37,7 +37,11 @@ for cid in cids:
     # each imagefile
     for filename in filelist:
         print "detecting:", filename
-        i = int(filename[filename.rindex('-')+1:filename.rindex('.')])
+        fn = filename.split('/')[-1]
+        try:
+            i = int(fn[fn.rindex('-')+1:fn.rindex('.')])
+        except:
+            i = 0
 
         # load and detect
         img = cv2.cv.LoadImage(filename)

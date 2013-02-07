@@ -35,6 +35,7 @@ class DownloadThread(threading.Thread):
             except urllib2.URLError as e:
                 if e.code == 404:
                     print "404:", self.url
+                    os.rename(directory_temp, directory)
                     return
                 else:
                     print "download error"
@@ -50,8 +51,11 @@ class DownloadThread(threading.Thread):
         img_urls = []
 
         # package
-        img_urls.append(soup(attrs={'name': 'package-image'})[0]['href'])
-        
+        try:
+            img_urls.append(soup(attrs={'name': 'package-image'})[0]['href'])
+        except:
+            print "package errpr:", self.url
+
         # sample
         s4 = soup(attrs={'id': 'sample-image-block'})
         if len(s4) != 0:
